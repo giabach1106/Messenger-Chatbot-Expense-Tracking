@@ -68,7 +68,7 @@ async def process_user_message(event):
         send_message(psid, "All your data has been reset.")
         return
 
-    if cmd == "undo"
+    if cmd == "undo":
         last_tx = await Transaction.find(Transaction.psid == psid).sort("-date").first_or_none()
         if last_tx:
             await last_tx.delete()
@@ -78,7 +78,7 @@ async def process_user_message(event):
             send_message(psid, "No transactions found to undo.")
         return
     
-    if cmd == "help"
+    if cmd == "help":
         msg = (
             "Commands:\n"
             "- 'KFC 10': Log expense\n"
