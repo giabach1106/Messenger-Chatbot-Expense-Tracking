@@ -55,6 +55,37 @@ async def process_user_message(event):
     
     # Hardcoded commands
     cmd = text.lower()
+    
+    # View subscriptions
+    if cmd == "subs" or cmd == "subscriptions":
+        subs = await Subscription.find(Subscription.psid == psid).to_list()
+        if not subs:
+            send_message(psid, "You have no active subscriptions.")
+        else:
+            msg = "Active Subscriptions:\n"
+            for s in subs:
+                date_str = s.next_billing_date.strftime("%d/%m")
+                msg += f"- {s.service_name}: ${s.amount} (Next: {date_str})\n"
+            msg += "\nTo cancel, type: 'Unsub [Name]'"
+            send_message(psid, msg)
+        return
+
+    # Unsubscribe command
+    if cmd.startswith("unsub "):
+        # Extract name
+        service_name = text[6:].strip() 
+        # Regex 'i' for case insensitive match
+        sub = await Subscription.find_one(
+            Subscription.psid == psid, 
+            Subscription.service_name == {"$regex": f"^{service_name}$", "$options": "i"}
+        )
+        
+        if sub:
+            await sub.delete()
+            send_message(psid, f"Unsubscribed from {sub.service_name}. You won't be charged again.")
+        else:
+            send_message(psid, f"Could not find subscription: '{service_name}'. Type 'Subs' to check list.")
+        return
 
     if cmd == "report":
         await send_weekly_report(psid)
@@ -84,6 +115,8 @@ async def process_user_message(event):
             "- 'KFC 10': Log expense\n"
             "- 'Set limit 500': Set weekly limit\n"
             "- 'Add sub Netflix 15': Add subscription\n"
+            "- 'Subs': List subs\n"
+            "- 'Unsub Netflix': Cancel sub\n"
             "- 'Report': Get monthly report\n"
             "- 'Reset': Clear all data\n"
             "- 'Undo': Remove last item\n"
@@ -124,7 +157,7 @@ async def process_user_message(event):
             item_name=data.get("item", "Unknown") + "(1st month)"
         ).insert()
 
-        send_message(psid, f"Subscription added: {sub.service_name} (${sub.amount}/mo)")
+        send_message(psid, f"Subscription added: {sub.service_name} (${sub.amount}/mo. To cancel type 'Unsub {sub.service_name}')")
 
     else: # Default to expense logging
         amount = float(data["amount"])
